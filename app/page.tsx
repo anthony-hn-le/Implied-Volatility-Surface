@@ -18,7 +18,12 @@ const DEFAULT_PARAMS: SurfaceParams = {
   yAxis: "strike",
 };
 
-function buildQuery(params: SurfaceParams, includeRateOverrides: boolean) {
+interface RateOverrides {
+  riskFreeRate: boolean;
+  dividendYield: boolean;
+}
+
+function buildQuery(params: SurfaceParams, overrides: RateOverrides) {
   const query = new URLSearchParams({
     ticker: params.ticker,
     timeMin: String(params.timeMin),
@@ -27,10 +32,8 @@ function buildQuery(params: SurfaceParams, includeRateOverrides: boolean) {
     maxStrikePct: String(params.maxStrikePct),
     yAxis: params.yAxis,
   });
-  if (includeRateOverrides) {
-    query.set("riskFreeRate", String(params.riskFreeRate));
-    query.set("dividendYield", String(params.dividendYield));
-  }
+  if (overrides.riskFreeRate) query.set("riskFreeRate", String(params.riskFreeRate));
+  if (overrides.dividendYield) query.set("dividendYield", String(params.dividendYield));
   return query.toString();
 }
 
@@ -39,27 +42,33 @@ export default function HomePage() {
   const [data, setData] = useState<SurfaceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasLoadedDefaults, setHasLoadedDefaults] = useState(false);
+  // Whether the user has manually edited each field for the *current* ticker.
+  // Risk-free rate is market-wide (not ticker-specific) so it stays sticky
+  // across ticker changes; dividend yield is ticker-specific, so changing the
+  // ticker clears this flag and lets the new ticker's real yield come back
+  // from the API instead of carrying over the previous ticker's value.
+  const [riskFreeRateTouched, setRiskFreeRateTouched] = useState(false);
+  const [dividendYieldTouched, setDividendYieldTouched] = useState(false);
 
-  const fetchSurface = async (nextParams: SurfaceParams, includeRateOverrides: boolean) => {
+  const fetchSurface = async (nextParams: SurfaceParams, overrides: RateOverrides) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/iv-surface?${buildQuery(nextParams, includeRateOverrides)}`);
+      const res = await fetch(`/api/iv-surface?${buildQuery(nextParams, overrides)}`);
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.error ?? "Something went wrong.");
       }
       const surface = json as SurfaceResponse;
       setData(surface);
-      if (!hasLoadedDefaults) {
-        setParams((p) => ({
-          ...p,
-          riskFreeRate: surface.riskFreeRate,
-          dividendYield: surface.dividendYield,
-        }));
-        setHasLoadedDefaults(true);
-      }
+      // Sync back any field we didn't explicitly override to the backend's
+      // freshly computed default (this is what makes dividend yield refresh
+      // to the new ticker's actual value instead of showing a stale one).
+      setParams((p) => ({
+        ...p,
+        riskFreeRate: overrides.riskFreeRate ? p.riskFreeRate : surface.riskFreeRate,
+        dividendYield: overrides.dividendYield ? p.dividendYield : surface.dividendYield,
+      }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -67,8 +76,15 @@ export default function HomePage() {
     }
   };
 
+  const handleParamsChange = (next: SurfaceParams) => {
+    if (next.dividendYield !== params.dividendYield) setDividendYieldTouched(true);
+    if (next.riskFreeRate !== params.riskFreeRate) setRiskFreeRateTouched(true);
+    if (next.ticker !== params.ticker) setDividendYieldTouched(false);
+    setParams(next);
+  };
+
   useEffect(() => {
-    fetchSurface(DEFAULT_PARAMS, false);
+    fetchSurface(DEFAULT_PARAMS, { riskFreeRate: false, dividendYield: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -123,8 +139,10 @@ export default function HomePage() {
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "1.5rem", alignItems: "start" }}>
         <ControlsPanel
           params={params}
-          onChange={setParams}
-          onSubmit={() => fetchSurface(params, true)}
+          onChange={handleParamsChange}
+          onSubmit={() =>
+            fetchSurface(params, { riskFreeRate: riskFreeRateTouched, dividendYield: dividendYieldTouched })
+          }
           loading={loading}
         />
 
