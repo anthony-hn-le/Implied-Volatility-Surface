@@ -4,7 +4,7 @@ A web app that visualizes the **implied volatility surface** for equity options 
 
 ## 🌐 Live Demo
 
-[implied-volatility-surface-anthony.streamlit.app](https://implied-volatility-surface-anthony.streamlit.app/) *(being migrated to Vercel — this link will be updated once the new deployment is live)*
+[implied-volatility-surface.vercel.app](https://implied-volatility-surface.vercel.app/)
 
 ## ✨ Features
 
