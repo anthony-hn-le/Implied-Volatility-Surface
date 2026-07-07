@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ControlsPanel from "./components/ControlsPanel";
 import StatTiles from "./components/StatTiles";
 import SurfacePlot from "./components/SurfacePlot";
+import LoadingSpinner from "./components/LoadingSpinner";
 import type { SurfaceParams, SurfaceResponse } from "@/lib/types";
 
 const DEFAULT_PARAMS: SurfaceParams = {
@@ -129,6 +130,7 @@ export default function HomePage() {
 
         <div
           style={{
+            position: "relative",
             background: "var(--bg-card)",
             border: "1px solid var(--border)",
             borderRadius: "10px",
@@ -149,6 +151,7 @@ export default function HomePage() {
           {data && !error && (
             <SurfacePlot ticker={data.ticker} grid={data.grid} yAxisLabel={data.yAxisLabel} />
           )}
+          {loading && <LoadingSpinner overlay={Boolean(data) && !error} />}
         </div>
       </div>
 
