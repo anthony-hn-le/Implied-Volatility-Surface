@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/iv-surface.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{node_modules,app,.next,.venv,public}/**"
+    }
+  }
+}
