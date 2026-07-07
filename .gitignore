@@ -16,3 +16,5 @@ __pycache__/
 # Env / OS
 .env*.local
 .DS_Store
+.vercel
+.env*

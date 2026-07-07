@@ -5,12 +5,15 @@
 ## This is the same Black-Scholes / implied-volatility / yfinance pipeline that
 ## used to live in volatility_surface.py as a Streamlit app, ported to return
 ## JSON instead of rendering a Streamlit page. The numerical logic (bs_call_price,
-## implied_volatility, the options-data pipeline, the surface interpolation) is
-## unchanged; only the Streamlit-specific I/O (st.error/st.stop/st.warning/
-## st.spinner) is replaced with plain Python control flow.
+## implied_volatility, the surface interpolation) is unchanged; the Streamlit-
+## specific I/O (st.error/st.stop/st.warning/st.spinner) is replaced with plain
+## Python control flow, and the independent Yahoo Finance calls in build_surface/
+## fetch_option_data now run concurrently via ThreadPoolExecutor instead of a
+## sequential loop, since they're I/O-bound and were the main source of latency.
 ##==============================================================================
 
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
@@ -116,26 +119,41 @@ def get_valid_expiration_dates(ticker, time_min, time_max):
     return valid_dates
 
 
-def fetch_option_data(ticker, exp_dates):
+def _fetch_one_expiration(ticker, exp_date):
+    """Fetch and filter a single expiration's call chain. Runs on a worker
+    thread — these are I/O-bound network calls to Yahoo Finance, so fetching
+    expirations concurrently rather than in a sequential loop is a straight
+    latency win with no change in what's fetched or how it's filtered."""
+    try:
+        opt_chain = ticker.option_chain(exp_date.strftime('%Y-%m-%d'))
+        calls = opt_chain.calls
+    except Exception as e:
+        return [], f'Failed to fetch option chain for {exp_date.date()}: {e}'
+
+    calls = calls[(calls['bid'] > 0) & (calls['ask'] > 0)]
+    rows = [
+        {
+            'expirationDate': exp_date,
+            'strike': row['strike'],
+            'mid': (row['bid'] + row['ask']) / 2,
+        }
+        for _, row in calls.iterrows()
+    ]
+    return rows, None
+
+
+def fetch_option_data(ticker, exp_dates, max_workers=8):
     option_data = []
     warnings = []
 
-    for exp_date in exp_dates:
-        try:
-            opt_chain = ticker.option_chain(exp_date.strftime('%Y-%m-%d'))
-            calls = opt_chain.calls
-        except Exception as e:
-            warnings.append(f'Failed to fetch option chain for {exp_date.date()}: {e}')
-            continue
-
-        calls = calls[(calls['bid'] > 0) & (calls['ask'] > 0)]
-
-        for _, row in calls.iterrows():
-            option_data.append({
-                'expirationDate': exp_date,
-                'strike': row['strike'],
-                'mid': (row['bid'] + row['ask']) / 2,
-            })
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(exp_dates))) as executor:
+        futures = [executor.submit(_fetch_one_expiration, ticker, exp_date) for exp_date in exp_dates]
+        for future in as_completed(futures):
+            rows, warning = future.result()
+            if warning:
+                warnings.append(warning)
+            else:
+                option_data.extend(rows)
 
     return pd.DataFrame(option_data), warnings
 
@@ -181,11 +199,30 @@ def build_surface(params):
     ticker_symbol = params['ticker']
     ticker = yf.Ticker(ticker_symbol)
 
-    spot_price = get_spot_price(ticker_symbol)
-    risk_free_rate = params['riskFreeRate'] if params['riskFreeRate'] is not None else get_risk_free_rate()
-    dividend_yield = params['dividendYield'] if params['dividendYield'] is not None else get_dividend_yield(ticker_symbol)
+    # spot price, rate/yield defaults, and the expiration list are four
+    # independent Yahoo Finance round trips with no dependency on each
+    # other's results, so fetch them concurrently rather than one at a time.
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        spot_price_future = executor.submit(get_spot_price, ticker_symbol)
+        rate_future = (
+            executor.submit(lambda: params['riskFreeRate'])
+            if params['riskFreeRate'] is not None
+            else executor.submit(get_risk_free_rate)
+        )
+        yield_future = (
+            executor.submit(lambda: params['dividendYield'])
+            if params['dividendYield'] is not None
+            else executor.submit(get_dividend_yield, ticker_symbol)
+        )
+        exp_dates_future = executor.submit(
+            get_valid_expiration_dates, ticker, params['timeMin'], params['timeMax']
+        )
 
-    exp_dates = get_valid_expiration_dates(ticker, params['timeMin'], params['timeMax'])
+        spot_price = spot_price_future.result()
+        risk_free_rate = rate_future.result()
+        dividend_yield = yield_future.result()
+        exp_dates = exp_dates_future.result()
+
     option_data, warnings = fetch_option_data(ticker, exp_dates)
 
     options_df = process_options_data(option_data, spot_price, params['minStrikePct'], params['maxStrikePct'])

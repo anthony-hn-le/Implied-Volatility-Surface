@@ -84,7 +84,7 @@ export default function HomePage() {
           rel="noopener noreferrer"
           style={{ color: "var(--accent-cyan)" }}
         >
-          Anthony Le
+          <strong>Anthony Le</strong>
         </a>
       </p>
       <p style={{ color: "var(--text-secondary)", maxWidth: "760px", marginBottom: "1.75rem", lineHeight: 1.6 }}>
@@ -186,7 +186,7 @@ export default function HomePage() {
           before making investment decisions.
         </p>
         <p>
-          <strong>Feedback:</strong> reach out on{" "}
+          <strong>Feedback:</strong> Reach out on{" "}
           <a
             href="https://www.linkedin.com/in/anthony-hn-le/"
             target="_blank"
