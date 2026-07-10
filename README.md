@@ -56,6 +56,10 @@ vercel dev   # runs the Next.js frontend and the Python function together
 
 Plain `next dev` will serve the frontend but not the Python function under `/api` — use `vercel dev` to test the full app locally.
 
+## 🙏 Acknowledgements
+
+This project was inspired by the recommendation of [Coding Jesus](https://www.youtube.com/@CodingJesus) on YouTube and the work of [Mateusz Jastrzębski](https://www.linkedin.com/in/mateusz-jastrz%C4%99bski-8a2622264/).
+
 ## 📝 License
 
 [MIT License](https://opensource.org/licenses/MIT) — Free to use, modify, and distribute.

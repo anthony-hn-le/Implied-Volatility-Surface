@@ -5,6 +5,7 @@ import ControlsPanel from "./components/ControlsPanel";
 import StatTiles from "./components/StatTiles";
 import SurfacePlot from "./components/SurfacePlot";
 import LoadingSpinner from "./components/LoadingSpinner";
+import { Footer } from "./components/Footer";
 import type { SurfaceParams, SurfaceResponse } from "@/lib/types";
 
 const DEFAULT_PARAMS: SurfaceParams = {
@@ -89,22 +90,36 @@ export default function HomePage() {
   }, []);
 
   return (
+    <>
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem", position: "relative", zIndex: 1 }}>
-      <h1 style={{ fontSize: "1.6rem", fontWeight: 800, marginBottom: "0.5rem" }}>
-        📊 Implied Volatility Surface
-      </h1>
-      <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-        Created by{" "}
-        <a
-          href="https://www.linkedin.com/in/anthony-hn-le/"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "var(--accent-cyan)" }}
-        >
-          <strong>Anthony Le</strong>
-        </a>
-      </p>
-      <p style={{ color: "var(--text-secondary)", maxWidth: "760px", marginBottom: "1.75rem", lineHeight: 1.6 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "flex-start" }}>
+          <a
+            href="https://anthony-le.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Anthony Le's personal website"
+            className="mono"
+            style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.5px", textDecoration: "none" }}
+          >
+            <span style={{ color: "var(--accent-cyan)" }}>AL</span>
+            <span style={{ color: "var(--text-primary)" }}>_</span>
+          </a>
+        </div>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, textAlign: "center" }}>
+          Implied Volatility Surface
+        </h1>
+        <div />
+      </div>
+      <p
+        style={{
+          color: "var(--text-secondary)",
+          maxWidth: "760px",
+          margin: "1rem auto 1.75rem",
+          lineHeight: 1.6,
+          textAlign: "center",
+        }}
+      >
         This application calculates and visualizes the implied volatility surface for options
         using the Black-Scholes model. Choose a ticker symbol and set the risk-free rate,
         dividend yield, time to expiration, and strike price range — the surface shows how
@@ -173,52 +188,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: "2.5rem",
-          paddingTop: "1.5rem",
-          borderTop: "1px solid var(--border)",
-          color: "var(--text-secondary)",
-          fontSize: "0.82rem",
-          lineHeight: 1.7,
-        }}
-      >
-        <p style={{ marginBottom: "0.75rem" }}>
-          <strong>Acknowledgements:</strong> This project was inspired by the recommendation of{" "}
-          <a href="https://www.youtube.com/@CodingJesus" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-cyan)" }}>
-            Coding Jesus
-          </a>{" "}
-          on YouTube and the work of{" "}
-          <a
-            href="https://www.linkedin.com/in/mateusz-jastrz%C4%99bski-8a2622264/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--accent-cyan)" }}
-          >
-            Mateusz Jastrzębski
-          </a>
-          .
-        </p>
-        <p style={{ marginBottom: "0.75rem" }}>
-          <strong>Disclaimer:</strong> This application is for educational purposes only and does
-          not constitute financial advice. The implied volatility surface is calculated using the
-          Black-Scholes model, which has limitations and assumptions that may not hold true in all
-          market conditions. Always conduct your own research and consult a financial advisor
-          before making investment decisions.
-        </p>
-        <p>
-          <strong>Feedback:</strong> Reach out on{" "}
-          <a
-            href="https://www.linkedin.com/in/anthony-hn-le/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--accent-cyan)" }}
-          >
-            LinkedIn
-          </a>
-          . Happy trading! 😊
-        </p>
-      </div>
     </div>
+    <Footer />
+    </>
   );
 }
